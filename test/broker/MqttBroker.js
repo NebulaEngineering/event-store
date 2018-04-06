@@ -29,16 +29,19 @@ describe('MQTT BROKER', function () {
             return done();
         });
     });
-    describe('Publish and listent on MQTT', function () {
+    describe('Publish and listen on MQTT', function () {
         it('Publish event and recive my own event on MQTT', function (done) {
-            let event = new Event('Test', 1, 'TestCreated', { id: 1, name: 'x' }, 'Mocha');
+            this.timeout(10000);
+            let event1 = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
+            //let event1 = new Event('Test', 1, 'TestCreated', { id: 1, name: 'x' }, 'Mocha');
             mqttBroker.getEventListener$('Test', false)
                 .first()
                 //.timeout(1500)
                 .subscribe(
                     (evt) => {
                         incomingEvent = evt;
-                        assert.deepEqual(evt, event);
+                        //console.log('==============> Expected message -> ', event1.timestamp + " -- "+ evt.timestamp);
+                        assert.deepEqual(evt, event1);
                     },
                     error => {
                         return done(new Error(error));
@@ -47,21 +50,23 @@ describe('MQTT BROKER', function () {
                         return done();
                     }
                 );
-            mqttBroker.publish$(event).subscribe(
+            mqttBroker.publish$(event1).subscribe(
                 () => { },
                 (err) => console.error(err),
                 () => { }
             );
         });
         it('Publish event and DO NOT recieve my own event on MQTT', function (done) {
-            let event = new Event('Test', 1, 'TestCreated', { id: 1, name: 'x' }, 'Mocha');
+            let event2 = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
             mqttBroker.getEventListener$('Test')
                 .first()
                 .timeout(500)
                 .subscribe(
                     (evt) => {
                         incomingEvent = evt;
-                        assert.fail(evt, 'nothing', 'Seems I have recieved the same evt I just sent');
+                        //console.log('==============> Unexpected message -> ', event2.timestamp + " -- "+ evt.timestamp);
+                        assert.notDeepEqual(evt, event2);
+                        //assert.fail(evt, 'nothing', 'Seems I have recieved the same evt I just sent');
                     },
                     error => {
                         assert.equal(error.name, 'TimeoutError');
@@ -71,7 +76,7 @@ describe('MQTT BROKER', function () {
                         return done();
                     }
                 );
-            mqttBroker.publish$(event).subscribe(
+            mqttBroker.publish$(event2).subscribe(
                 () => { },
                 (err) => console.error(err),
                 () => { }

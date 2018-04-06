@@ -20,7 +20,7 @@ describe('PUBSUB BROKER', function () {
     describe('Prepare broker', function () {
         it('instance PubSubBroker', function (done) {
             //ENVIRONMENT VARS
-            const GOOGLE_APPLICATION_CREDENTIALS = '/Users/sebastianmolano/NebulaE/Projects/TPM/gateway/etc/gcloud-service-key.json'
+            const GOOGLE_APPLICATION_CREDENTIALS = './etc/gcloud-service-key.json'
             process.env.GOOGLE_APPLICATION_CREDENTIALS = GOOGLE_APPLICATION_CREDENTIALS;
             const projectId = 'ne-tpm-prod';
             const eventsTopic = 'events';
@@ -30,10 +30,10 @@ describe('PUBSUB BROKER', function () {
             return done();
         });
     });
-    describe('Publish and listent', function () {
+    describe('Publish and listen', function () {
         it('Publish event and recive my own event', function (done) {
             this.timeout(10000);
-            let event = new Event('Test', 1, 'TestCreated', { id: 1, name: 'x' }, 'Mocha');
+            let event = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
             pubsubBroker.getEventListener$('Test', false)
                 .first()
                 .timeout(6000)
@@ -57,14 +57,15 @@ describe('PUBSUB BROKER', function () {
         });
         it('Publish event and DO NOT recieve my own event', function (done) {
             this.timeout(10000);
-            let event = new Event('Test', 1, 'TestCreated', { id: 1, name: 'x' }, 'Mocha');
+            let event = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
             pubsubBroker.getEventListener$('Test')
                 .first()
                 .timeout(6000)
                 .subscribe(
                     (evt) => {
                         incomingEvent = evt;
-                        assert.fail(evt, 'nothing', 'Seems I have recieved the same evt I just sent');
+                        assert.notEqual(evt.timestamp, event.timestamp, 'Seems I have recieved and different evt');                        
+                        //assert.fail(evt, 'nothing', 'Seems I have recieved the same evt I just sent');
                     },
                     error => {
                         assert.equal(error.name, 'TimeoutError');
