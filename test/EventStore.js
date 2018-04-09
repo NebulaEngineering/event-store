@@ -58,12 +58,15 @@ describe('EventStore', function () {
 
     describe('retrieve aggregates', function () {
         it('Retrieve aggregates from beginning', function (done) {
-            eventStore.retrieveNewAggregates('Test', 0)
+            eventStore.retrieveNewAggregates('User', 0, {offset: 0, pageSize: 100})
             .then(result => {
                 assert.ok(true, 'Aggregates retrieved ');
+                console.log("Succes");
+                return done()
             })
             .catch(error => {
-                return doneerror();
+                console.log("Fail");
+                return done(error);
             });
             //let event = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
             //eventStore.retrieveEvents()
@@ -84,6 +87,7 @@ describe('EventStore', function () {
 
     describe('Retrieve', function () {
         it('Retrieve events', function (done) {
+            return done();
             //let event = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
             //eventStore.retrieveEvents()
 
