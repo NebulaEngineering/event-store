@@ -58,7 +58,7 @@ describe('EventStore', function () {
 
     describe('retrieve aggregates', function () {
         it('Retrieve aggregates from beginning', function (done) {
-            eventStore.retrieveNewAggregates('User', 0, {offset: 0, pageSize: 100})
+            eventStore.retrieveNewAggregates('Device', 0, {offset: 0, pageSize: 100})
             .then(result => {
                 assert.ok(true, 'Aggregates retrieved ');
                 console.log("Succes");
