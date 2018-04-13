@@ -141,7 +141,9 @@ describe('MONGO STORE', function () {
         });
     });
     describe('Events retrieval', function () {
-        it('get events on same month', function (done) {
+        it('get events on same month', function (done) {            
+            this.timeout(5000);
+            let evtVersionChecker = 1;
             aggregateId = `aggregate-id-${Math.random()}`;
             const evt = new Event(
                 {
@@ -159,10 +161,11 @@ describe('MONGO STORE', function () {
                     acc.push(evt);
                     return acc;
                 }, [])
-                .delay(500)
                 .mergeMap(pushedVersions => store.getEvents$('TestAggregate_retrieval_same_month', aggregateId, 0))
                 .subscribe(
-                    (evt) => console.log(evt),
+                    (evt) => {
+                        assert.equal(evtVersionChecker++, evt.av);
+                    },
                     (error) => {
                         console.error(`Error retrieving events`, error);
                         return done(error);
