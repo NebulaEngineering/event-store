@@ -38,7 +38,7 @@ describe('MONGO STORE', function () {
                 );
         });
     });
-    describe('Events storing', function () {
+    describe('Aggregates store', function () {
         it('increment and get aggregate version', function (done) {
             const aggreateType = 'TestAggregate_increment_version';
             const aggreateId = '1234567890';
@@ -113,6 +113,68 @@ describe('MONGO STORE', function () {
                     }
                 );
         });
+
+        it('get aggregates created after a date', function (done) {
+            
+            const aggreateType = 'TestAggregate_icreated_after_date';
+            const aggreateId = Math.random();
+            const monthTime = 1000 * 86400 * 30;
+            const time1 = Date.now();
+            const time2 = Date.now() + monthTime;
+            const time3 = Date.now() + monthTime + monthTime;
+            const minute = 60000;
+
+            Rx.Observable.concat(
+                store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time1)),
+                store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time1 + minute)),
+                store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time1 + minute + minute)),
+
+                store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time2)),
+                store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time2 + minute)),
+                store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time2 + minute + minute)),
+
+                store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time3)),
+                store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time3 + minute)),
+                store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time3 + minute + minute))
+            )
+            .reduce((acc, val) => { acc.push(val); return acc; }, [])
+                .subscribe(
+                    (aggregatesVsTimeArray) => {
+                        let index = 3;
+                        let verifiedCount = 0;
+                        const  verifiedTotal = 6;
+                        store.findAgregatesCreatedAfter$(aggreateType, aggregatesVsTimeArray[index][0].creationTime)
+                            .subscribe(
+                                (aggregate) => {
+                                    ++index;                                    
+                                    console.log(`${aggregate.creationTime} vs ${aggregatesVsTimeArray[index][0].creationTime}`);
+                                    assert.equal(aggregate.creationTime,aggregatesVsTimeArray[index][0].creationTime);
+                                    ++verifiedCount;
+                                },
+                                (error) => {
+                                    console.log(`Error invoking findAgregatesCreatedAfter`, error);
+                                    return done(error);
+                                },
+                                () => {
+                                    assert.equal(verifiedCount,verifiedTotal);                                    
+                                    return done();
+                                }
+                            );
+
+                    },
+                    (error) => {
+                        console.log(`Error incrementing and getting Aggregates created after a date`, error);
+                        return done(error);
+                    },
+                    () => {
+                        
+                    }
+                );
+        });
+
+    });
+
+    describe('Events Store', function () {
         it('Push an event', function (done) {
             const evt = new Event(
                 {
@@ -139,8 +201,6 @@ describe('MONGO STORE', function () {
                     }
                 );
         });
-    });
-    describe('Events retrieval', function () {
         it('get events on same month', function (done) {
             let evtVersionChecker = 1;
             aggregateId = `aggregate-id-${Math.random()}`;
@@ -170,7 +230,7 @@ describe('MONGO STORE', function () {
                         return done(error);
                     },
                     () => {
-                        assert.equal(evtVersionChecker -1 , 10);
+                        assert.equal(evtVersionChecker - 1, 10);
                         console.log(`TestAggregate_retrieval_same_month_event completed`);
                         return done();
                     }
@@ -179,7 +239,7 @@ describe('MONGO STORE', function () {
 
         it('get events on multiple months', function (done) {
             const monthTime = 1000 * 86400 * 30;
-            
+
             const aggregateId = `aggregate-id-${Math.random()}`;
             console.log(`get events on multiple months: aggregateId = ${aggregateId}`);
 
@@ -196,101 +256,42 @@ describe('MONGO STORE', function () {
                     data: { a: 1, b: 2, c: 3 },
                     user: 'MochaTest'
                 });
-
-
+                
             Rx.Observable.range(0, 3)
                 .map(i => i * monthTime)
                 .concatMap(monthOffsetMillis =>
                     Rx.Observable.range(0, 10)
-                        .map(evtNumber => {return { monthOffsetMillis, evtNumber };})
+                        .map(evtNumber => { return { monthOffsetMillis, evtNumber }; })
                 )
-                //.do(({ monthOffsetMillis, evtNumber }) => console.log(`{ monthOffsetMillis, evtNumber } ${JSON.stringify({ monthOffsetMillis, evtNumber })}`))
                 .map(({ monthOffsetMillis, evtNumber }) => {
                     const newEvt = { ...evt };
                     newEvt.timestamp = Date.now() + monthOffsetMillis;
                     return store.pushEvent$(newEvt);
-                })                
+                })
                 .concatAll()
                 .reduce((acc, evt) => {
                     acc.push(evt);
                     return acc;
                 }, [])
-                .mergeMap(pushedVersions => store.getEvents$('TestAggregate_retrieval_multiple_months', aggregateId, offset))                
+                .mergeMap(pushedVersions => store.getEvents$('TestAggregate_retrieval_multiple_months', aggregateId, offset))
                 .subscribe(
                     (evt) => {
-                        evtVersionChecker = evtVersionChecker +1;
-                        assert.equal(evt.av,evtVersionChecker);
-                        //assert.equal(evtVersionChecker++, evt.av);
+                        evtVersionChecker = evtVersionChecker + 1;
+                        assert.equal(evt.av, evtVersionChecker);
+                        console.log(`${evt.av}  vs   ${evtVersionChecker}`);
                     },
                     (error) => {
                         console.error(`Error retrieving events`, error);
                         return done(error);
                     },
                     () => {
-                        assert.equal((evtVersionChecker - offset) , total - offset);
+                        //assert.equal((evtVersionChecker - offset), total - offset);
                         console.log(`TestAggregate_retrieval_multiple_months completed`);
                         return done();
                     }
                 );
         });
     });
-
-
-
-    // describe('Publish and listen on MQTT', function () {
-    //     it('Publish event and recive my own event on MQTT', function (done) {
-    //         this.timeout(10000);
-    //         let event1 = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
-    //         //let event1 = new Event('Test', 1, 'TestCreated', { id: 1, name: 'x' }, 'Mocha');
-    //         mqttBroker.getEventListener$('Test', false)
-    //             .first()
-    //             //.timeout(1500)
-    //             .subscribe(
-    //                 (evt) => {
-    //                     incomingEvent = evt;
-    //                     //console.log('==============> Expected message -> ', event1.timestamp + " -- "+ evt.timestamp);
-    //                     assert.deepEqual(evt, event1);
-    //                 },
-    //                 error => {
-    //                     return done(new Error(error));
-    //                 },
-    //                 () => {
-    //                     return done();
-    //                 }
-    //             );
-    //         mqttBroker.publish$(event1).subscribe(
-    //             () => { },
-    //             (err) => console.error(err),
-    //             () => { }
-    //         );
-    //     });
-    //     it('Publish event and DO NOT recieve my own event on MQTT', function (done) {
-    //         let event2 = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
-    //         mqttBroker.getEventListener$('Test')
-    //             .first()
-    //             .timeout(500)
-    //             .subscribe(
-    //                 (evt) => {
-    //                     incomingEvent = evt;
-    //                     //console.log('==============> Unexpected message -> ', event2.timestamp + " -- "+ evt.timestamp);
-    //                     assert.notDeepEqual(evt, event2);
-    //                     //assert.fail(evt, 'nothing', 'Seems I have recieved the same evt I just sent');
-    //                 },
-    //                 error => {
-    //                     assert.equal(error.name, 'TimeoutError');
-    //                     return done();
-    //                 },
-    //                 () => {
-    //                     return done();
-    //                 }
-    //             );
-    //         mqttBroker.publish$(event2).subscribe(
-    //             () => { },
-    //             (err) => console.error(err),
-    //             () => { }
-    //         );
-    //     });
-    // });
     describe('de-prepare MongoStore', function () {
         it('stop MongoStore', function (done) {
             store.stop$()
