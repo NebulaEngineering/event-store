@@ -141,8 +141,7 @@ describe('MONGO STORE', function () {
         });
     });
     describe('Events retrieval', function () {
-        it('get events on same month', function (done) {            
-            this.timeout(5000);
+        it('get events on same month', function (done) {
             let evtVersionChecker = 1;
             aggregateId = `aggregate-id-${Math.random()}`;
             const evt = new Event(
@@ -155,7 +154,7 @@ describe('MONGO STORE', function () {
                     user: 'MochaTest'
                 });
             Rx.Observable.range(0, 10)
-                .map(i => store.pushEvent$({...evt}))
+                .map(i => store.pushEvent$({ ...evt }))
                 .concatAll()
                 .reduce((acc, evt) => {
                     acc.push(evt);
@@ -171,7 +170,65 @@ describe('MONGO STORE', function () {
                         return done(error);
                     },
                     () => {
+                        assert.equal(evtVersionChecker -1 , 10);
                         console.log(`TestAggregate_retrieval_same_month_event completed`);
+                        return done();
+                    }
+                );
+        });
+
+        it('get events on multiple months', function (done) {
+            const monthTime = 1000 * 86400 * 30;
+            
+            const aggregateId = `aggregate-id-${Math.random()}`;
+            console.log(`get events on multiple months: aggregateId = ${aggregateId}`);
+
+            const total = 30;
+            const offset = 15;
+            let evtVersionChecker = 15;
+
+            const evt = new Event(
+                {
+                    eventType: `TestAggregate_retrieval_multiple_months_event`,
+                    eventTypeVersion: 1,
+                    aggregateType: 'TestAggregate_retrieval_multiple_months',
+                    aggregateId,
+                    data: { a: 1, b: 2, c: 3 },
+                    user: 'MochaTest'
+                });
+
+
+            Rx.Observable.range(0, 3)
+                .map(i => i * monthTime)
+                .concatMap(monthOffsetMillis =>
+                    Rx.Observable.range(0, 10)
+                        .map(evtNumber => {return { monthOffsetMillis, evtNumber };})
+                )
+                //.do(({ monthOffsetMillis, evtNumber }) => console.log(`{ monthOffsetMillis, evtNumber } ${JSON.stringify({ monthOffsetMillis, evtNumber })}`))
+                .map(({ monthOffsetMillis, evtNumber }) => {
+                    const newEvt = { ...evt };
+                    newEvt.timestamp = Date.now() + monthOffsetMillis;
+                    return store.pushEvent$(newEvt);
+                })                
+                .concatAll()
+                .reduce((acc, evt) => {
+                    acc.push(evt);
+                    return acc;
+                }, [])
+                .mergeMap(pushedVersions => store.getEvents$('TestAggregate_retrieval_multiple_months', aggregateId, offset))                
+                .subscribe(
+                    (evt) => {
+                        evtVersionChecker = evtVersionChecker +1;
+                        assert.equal(evt.av,evtVersionChecker);
+                        //assert.equal(evtVersionChecker++, evt.av);
+                    },
+                    (error) => {
+                        console.error(`Error retrieving events`, error);
+                        return done(error);
+                    },
+                    () => {
+                        assert.equal((evtVersionChecker - offset) , total - offset);
+                        console.log(`TestAggregate_retrieval_multiple_months completed`);
                         return done();
                     }
                 );
