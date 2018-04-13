@@ -8,7 +8,13 @@ const Event = require('../../lib/entities/Event');
 
 //GLOABAL VARS to use between tests
 let mqttBroker = {};
-let eventMqtt = new Event('Test', 1, 'TestCreated', { id: 1, name: 'x' }, 'Mocha');
+let eventMqtt = new Event(
+    {
+        eventType: 'TestCreated', eventTypeVersion: 1,
+        aggregateType: 'Test', aggregateId: 1,
+        data: { id: 1, name: 'x' },
+        user: 'Mocha', aggregateVersion: 1
+    });
 
 
 /*
@@ -22,8 +28,8 @@ describe('MQTT BROKER', function () {
         it('instance MqttBroker', function (done) {
             //ENVIRONMENT VARS
             const brokerUrl = 'mqtt://localhost:1883';
-            const projectId = 'test';
-            const eventsTopic = 'events';
+            const projectId = 'MqttBrokerTest';
+            const eventsTopic = 'MqttBrokerTest';
             mqttBroker = new MqttBroker({ brokerUrl, eventsTopic, projectId });
             assert.ok(true, 'MqttBroker constructor worked');
             return done();
@@ -32,7 +38,13 @@ describe('MQTT BROKER', function () {
     describe('Publish and listen on MQTT', function () {
         it('Publish event and recive my own event on MQTT', function (done) {
             this.timeout(10000);
-            let event1 = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
+            let event1 = new Event(
+                {
+                    eventType: 'TestCreated', eventTypeVersion: 1,
+                    aggregateType: 'Test', aggregateId: 1,
+                    data: { id: 1, name: 'x' },
+                    user: 'Mocha', aggregateVersion: 1
+                });
             //let event1 = new Event('Test', 1, 'TestCreated', { id: 1, name: 'x' }, 'Mocha');
             mqttBroker.getEventListener$('Test', false)
                 .first()
