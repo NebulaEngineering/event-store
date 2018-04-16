@@ -115,8 +115,9 @@ describe('MONGO STORE', function () {
         });
 
         it('get aggregates created after a date', function (done) {
+            this.timeout(3000);
             
-            const aggreateType = 'TestAggregate_icreated_after_date';
+            const aggreateType = 'TestAggregate_icreated_after_date_'+Math.random();
             const aggreateId = Math.random();
             const monthTime = 1000 * 86400 * 30;
             const time1 = Date.now();
@@ -140,14 +141,14 @@ describe('MONGO STORE', function () {
             .reduce((acc, val) => { acc.push(val); return acc; }, [])
                 .subscribe(
                     (aggregatesVsTimeArray) => {
-                        let index = 3;
+                        let index = 2;
                         let verifiedCount = 0;
                         const  verifiedTotal = 6;
                         store.findAgregatesCreatedAfter$(aggreateType, aggregatesVsTimeArray[index][0].creationTime)
                             .subscribe(
                                 (aggregate) => {
                                     ++index;                                    
-                                    console.log(`${aggregate.creationTime} vs ${aggregatesVsTimeArray[index][0].creationTime}`);
+                                    //console.log(`${aggregate.creationTime} vs ${aggregatesVsTimeArray[index][0].creationTime}`);
                                     assert.equal(aggregate.creationTime,aggregatesVsTimeArray[index][0].creationTime);
                                     ++verifiedCount;
                                 },
@@ -155,7 +156,7 @@ describe('MONGO STORE', function () {
                                     console.log(`Error invoking findAgregatesCreatedAfter`, error);
                                     return done(error);
                                 },
-                                () => {
+                                () => {                                    
                                     assert.equal(verifiedCount,verifiedTotal);                                    
                                     return done();
                                 }
@@ -278,7 +279,6 @@ describe('MONGO STORE', function () {
                     (evt) => {
                         evtVersionChecker = evtVersionChecker + 1;
                         assert.equal(evt.av, evtVersionChecker);
-                        console.log(`${evt.av}  vs   ${evtVersionChecker}`);
                     },
                     (error) => {
                         console.error(`Error retrieving events`, error);
