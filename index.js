@@ -1,12 +1,7 @@
 'use strict'
 
-if (process.env.NODE_ENV !== 'production') {
-    require('dotenv').load();
-}
-
-const EventStore = require('./lib/EventStore').EventStore;
-const Event = require('./lib/entities/Event').Event;
-
+const EventStore = require('./lib/EventStore');
+const Event = require('./lib/entities/Event');
 
 module.exports = {
     EventStore,
