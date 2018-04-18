@@ -21,7 +21,7 @@ describe('MONGO STORE', function () {
     describe('Prepare store', function () {
         it('instance MongoStore', function (done) {
             store = new MongoStore({ url: 'mongodb://localhost:27017', aggregatesDbName: 'Aggregates', eventStoreDbName: 'EventStore' });
-            store.init$()
+            store.start$()
                 .subscribe(
                     () => {
                     },

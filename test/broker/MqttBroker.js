@@ -31,8 +31,22 @@ describe('MQTT BROKER', function () {
             const projectId = 'MqttBrokerTest';
             const eventsTopic = 'MqttBrokerTest';
             mqttBroker = new MqttBroker({ brokerUrl, eventsTopic, projectId });
-            assert.ok(true, 'MqttBroker constructor worked');
+            assert.ok(true, 'MqttBroker constructor worked');            
             return done();
+        });
+        it('start MqttBroker', function (done) {
+            mqttBroker.start$()
+            .subscribe(
+                (evt) => console.log(`start MqttBroker: ${evt}`),
+                (error) => {
+                    console.error(`error starting MqttBroker`,error);
+                    return done(error);
+                },
+                () => { 
+                    console.log('MQTT Broker started!');
+                    return done();
+                }
+            );
         });
     });
     describe('Publish and listen on MQTT', function () {
@@ -97,9 +111,18 @@ describe('MQTT BROKER', function () {
     });
     describe('de-prepare mqtt broker', function () {
         it('stop MqttBroker', function (done) {            
-            mqttBroker.stopListening();
-            assert.ok(true, 'MqttBroker stoped');
-            return done();
+            mqttBroker.stop$()
+            .subscribe(
+                (evt) => console.log(`stop MqttBroker: ${evt}`),
+                (error) => {
+                    console.error('Error stopping MqttBroker',error);
+                    return done(error);
+                },
+                () => {
+                    console.log('Mqtt broker stoped');
+                    return done();
+                }
+            );            
         });
     });
 });
