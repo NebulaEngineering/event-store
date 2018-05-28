@@ -2,6 +2,8 @@
 const assert = require('assert');
 const Rx = require('rxjs');
 const should = require('chai').should();
+const expect = require('chai').expect;
+var intersection = require('array-intersection');
 
 //LIBS FOR TESTING
 const MongoStore = require('../../lib/store/MongoStore');
@@ -116,8 +118,8 @@ describe('MONGO STORE', function () {
 
         it('get aggregates created after a date', function (done) {
             this.timeout(3000);
-            
-            const aggreateType = 'TestAggregate_icreated_after_date_'+Math.random();
+
+            const aggreateType = 'TestAggregate_icreated_after_date_' + Math.random();
             const aggreateId = Math.random();
             const monthTime = 1000 * 86400 * 30;
             const time1 = Date.now();
@@ -138,26 +140,26 @@ describe('MONGO STORE', function () {
                 store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time3 + minute)),
                 store.incrementAggregateVersionAndGet$(aggreateType, Math.random(), (time3 + minute + minute))
             )
-            .reduce((acc, val) => { acc.push(val); return acc; }, [])
+                .reduce((acc, val) => { acc.push(val); return acc; }, [])
                 .subscribe(
                     (aggregatesVsTimeArray) => {
                         let index = 2;
                         let verifiedCount = 0;
-                        const  verifiedTotal = 6;
+                        const verifiedTotal = 6;
                         store.findAgregatesCreatedAfter$(aggreateType, aggregatesVsTimeArray[index][0].creationTime)
                             .subscribe(
                                 (aggregate) => {
-                                    ++index;                                    
+                                    ++index;
                                     //console.log(`${aggregate.creationTime} vs ${aggregatesVsTimeArray[index][0].creationTime}`);
-                                    assert.equal(aggregate.creationTime,aggregatesVsTimeArray[index][0].creationTime);
+                                    assert.equal(aggregate.creationTime, aggregatesVsTimeArray[index][0].creationTime);
                                     ++verifiedCount;
                                 },
                                 (error) => {
                                     console.log(`Error invoking findAgregatesCreatedAfter`, error);
                                     return done(error);
                                 },
-                                () => {                                    
-                                    assert.equal(verifiedCount,verifiedTotal);                                    
+                                () => {
+                                    assert.equal(verifiedCount, verifiedTotal);
                                     return done();
                                 }
                             );
@@ -168,7 +170,7 @@ describe('MONGO STORE', function () {
                         return done(error);
                     },
                     () => {
-                        
+
                     }
                 );
         });
@@ -257,7 +259,7 @@ describe('MONGO STORE', function () {
                     data: { a: 1, b: 2, c: 3 },
                     user: 'MochaTest'
                 });
-                
+
             Rx.Observable.range(0, 3)
                 .map(i => i * monthTime)
                 .concatMap(monthOffsetMillis =>
@@ -292,6 +294,84 @@ describe('MONGO STORE', function () {
                 );
         });
     });
+
+    describe('Events ACK and Retrieve', function () {
+        const aggregateType = 'TestAggregate_' + Math.random();
+        const events = [];
+        const versionTimeStrSet = new Set();
+        it('push some test events', function (done) {
+
+            Rx.Observable.range(1, 100)
+                .map(i => {
+                    const timestamp = Date.now();
+                    const evt = new Event(
+                        {
+                            eventType: 'TestEventAck',
+                            eventTypeVersion: 1,
+                            aggregateType,
+                            aggregateId: i,
+                            data: { a: 1, b: 2, c: 3 },
+                            user: 'MochaTest'
+                        });
+                    evt.timestamp = (timestamp + (i * 86400000)); //event per day
+                    return evt;
+                })
+                .concatMap(evt => store.pushEvent$(evt))
+                .subscribe(
+                    ({ aggregate, event, versionTimeStr }) => {
+                        events.push(event);
+                        versionTimeStrSet.add(versionTimeStr);
+                        //console.log(`   pushed test event for ack => at:${event.at}, aid:${event.aid}, ts=${event.timestamp},  versionTimeStr=${versionTimeStr}`);
+                    },
+                    (error) => {
+                        //console.log(`   Error pusing test events for ACK`, error);
+                        return done(error);
+                    },
+                    () => {
+                        assert.equal(events.length, 100);
+                        expect(versionTimeStrSet.size).to.be.within(4, 5);
+                        return done();
+                    }
+                );
+
+        });
+
+        it('acknowledge half the messages and retrieve the other half', function (done) {
+            this.timeout(5000);
+            Rx.Observable.concat(
+                Rx.Observable.from(events)
+                    .take(1)
+                    .mergeMap(evt => store.acknowledgeEvent$(evt, 'MOCHA_EventStore'))
+                    //.do(event => console.log(`   event acknowledeg => at:${event.at}, aid:${event.aid}, ts=${event.timestamp}`))
+                    ,
+                Rx.Observable.from(events)
+                    .take((events.length / 2))
+                    .mergeMap(evt => store.acknowledgeEvent$(evt, 'MOCHA_EventStore'))
+                    //.do(event => console.log(`   event acknowledeg => at:${event.at}, aid:${event.aid}, ts=${event.timestamp}`))
+                    .toArray(),
+                store.retrieveUnacknowledgedEvents$(aggregateType, 'MOCHA_EventStore')
+                    //.do(event => console.log(`   event retrieved without ack => at:${event.at}, aid:${event.aid}, ts=${event.timestamp}`))
+                    .toArray()
+            ).toArray()
+                .subscribe(
+                    ([first, ackEvents, nacksEvents]) => {
+                        expect((ackEvents.length + nacksEvents.length)).to.be.equal(events.length);
+                        expect(ackEvents.length).to.be.equal(nacksEvents.length);
+                        const intersec = intersection(ackEvents, nacksEvents);                        
+                        expect(intersec).to.be.empty;
+                    },
+                    (error) => {
+                        return done(error);
+                    },
+
+                    () => {
+                        return done();
+                    }
+                );
+        });
+
+    });
+
     describe('de-prepare MongoStore', function () {
         it('stop MongoStore', function (done) {
             store.stop$()
