@@ -339,14 +339,10 @@ describe('MONGO STORE', function () {
         it('acknowledge half the messages and retrieve the other half', function (done) {
             this.timeout(5000);
             Rx.Observable.concat(
-                Rx.Observable.from(events)
-                    .take(1)
-                    .mergeMap(evt => store.acknowledgeEvent$(evt, 'MOCHA_EventStore'))
-                    //.do(event => console.log(`   event acknowledeg => at:${event.at}, aid:${event.aid}, ts=${event.timestamp}`))
-                    ,
+                store.ensureAcknowledgeRegistry$(aggregateType),
                 Rx.Observable.from(events)
                     .take((events.length / 2))
-                    .mergeMap(evt => store.acknowledgeEvent$(evt, 'MOCHA_EventStore'))
+                    .concatMap(evt => store.acknowledgeEvent$(evt, 'MOCHA_EventStore'))
                     //.do(event => console.log(`   event acknowledeg => at:${event.at}, aid:${event.aid}, ts=${event.timestamp}`))
                     .toArray(),
                 store.retrieveUnacknowledgedEvents$(aggregateType, 'MOCHA_EventStore')
@@ -354,7 +350,8 @@ describe('MONGO STORE', function () {
                     .toArray()
             ).toArray()
                 .subscribe(
-                    ([first, ackEvents, nacksEvents]) => {
+                    ([ensure, ackEvents, nacksEvents]) => {
+                        console.log(ensure);
                         expect((ackEvents.length + nacksEvents.length)).to.be.equal(events.length);
                         expect(ackEvents.length).to.be.equal(nacksEvents.length);
                         const intersec = intersection(ackEvents, nacksEvents);                        
