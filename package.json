@@ -1,6 +1,6 @@
 {
   "name": "@nebulae/event-store",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Event Store Lib for NebulaE Microservices",
   "main": "index.js",
   "scripts": {
