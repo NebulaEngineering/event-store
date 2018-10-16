@@ -57,7 +57,7 @@ describe('PUBSUB BROKER', function () {
                 });
             //let event1 = new Event('Test', 1, 'TestCreated', { id: 1, name: 'x' }, 'Mocha');
             broker.getEventListener$('Test', false)
-                .first()
+                .pipe(first())
                 //.timeout(1500)
                 .subscribe(
                     (evt) => {
@@ -81,8 +81,8 @@ describe('PUBSUB BROKER', function () {
         it('Publish event and DO NOT recieve my own event on PubSubBroker', function (done) {
             let event2 = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
             broker.getEventListener$('Test')
-                .first()
-                .timeout(500)
+                .pipe(first()
+                ,timeout(500))
                 .subscribe(
                     (evt) => {
                         incomingEvent = evt;

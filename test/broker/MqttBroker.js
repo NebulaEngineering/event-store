@@ -1,7 +1,7 @@
 // TEST LIBS
 const assert = require('assert');
 const Rx = require('rxjs');
-
+const { first, timeout, filter, mapTo, map} = require('rxjs/operators');
 //LIBS FOR TESTING
 const MqttBroker = require('../../lib/broker/MqttBroker');
 const Event = require('../../lib/entities/Event');
@@ -61,7 +61,7 @@ describe('MQTT BROKER', function () {
                 });
             //let event1 = new Event('Test', 1, 'TestCreated', { id: 1, name: 'x' }, 'Mocha');
             mqttBroker.getEventListener$('Test', false)
-                .first()
+                .pipe(first())
                 //.timeout(1500)
                 .subscribe(
                     (evt) => {
@@ -85,8 +85,9 @@ describe('MQTT BROKER', function () {
         it('Publish event and DO NOT recieve my own event on MQTT', function (done) {
             let event2 = new Event('TestCreated', 1, 'Test', 1, 1, { id: 1, name: 'x' }, 'Mocha');
             mqttBroker.getEventListener$('Test')
-                .first()
-                .timeout(500)
+                .pipe(first()
+                , timeout(500)
+                )
                 .subscribe(
                     (evt) => {
                         incomingEvent = evt;
