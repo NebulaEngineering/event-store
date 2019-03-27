@@ -456,7 +456,7 @@ describe('MONGO STORE', function() {
     it('acknowledge half the messages and retrieve the other half', function(done) {
       this.timeout(5000);
       Rx.concat(
-        store.ensureAcknowledgeRegistry$(aggregateType),
+        store.ensureAcknowledgeRegistry$(aggregateType,'mocha'),
         Rx.from(events).pipe(
           take(events.length / 2),
           concatMap(evt => store.acknowledgeEvent$(evt, 'MOCHA_EventStore')),
