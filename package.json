@@ -1,6 +1,6 @@
 {
   "name": "@nebulae/event-store",
-  "version": "4.0.3",
+  "version": "4.1.0",
   "description": "Event Store Lib for NebulaE Microservices",
   "main": "index.js",
   "scripts": {
@@ -31,7 +31,7 @@
     "@nebulae/backend-node-tools": "^0.2.9",
     "async-mqtt": "^2.6.1",
     "dotenv": "^5.0.1",
-    "mongodb": "^3.0.5",
+    "mongodb": "^5.5.0",
     "rxjs": "^6.6.7",
     "uuid": "^3.2.1"
   }
